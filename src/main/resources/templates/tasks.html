@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>ToDo Application</title>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" th:href="@{/style.css}" />
+    <!-- Bootstrap CSS -->
+    <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+            crossorigin="anonymous"
+    />
+</head>
+
+<body>
+<div class="container mt-4">
+    <h1 class="text-center mb-4">📝 To-Do Application</h1>
+
+    <!-- Flash Messages -->
+    <div
+            th:if="${successMessage}"
+            class="alert alert-success alert-dismissible fade show"
+            role="alert"
+    >
+        <span th:text="${successMessage}">Task updated successfully!</span>
+        <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close"
+        ></button>
+    </div>
+
+    <div
+            th:if="${errorMessage}"
+            class="alert alert-danger alert-dismissible fade show"
+            role="alert"
+    >
+        <span th:text="${errorMessage}">An error occurred.</span>
+        <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close"
+        ></button>
+    </div>
+
+    <!-- Filter & Sort Form -->
+    <form method="get" action="/" class="d-flex flex-wrap gap-3 align-items-center mb-4">
+        <!-- Priority Filter Dropdown -->
+        <select name="priority" class="form-select w-auto" onchange="this.form.submit()">
+            <option value="">Filter by Priority</option>
+            <option value="LOW" th:selected="${param.priority == 'LOW'}">Low</option>
+            <option value="MEDIUM" th:selected="${param.priority == 'MEDIUM'}">Medium</option>
+            <option value="HIGH" th:selected="${param.priority == 'HIGH'}">High</option>
+        </select>
+
+        <!-- Sort Dropdown -->
+        <select name="sort" class="form-select w-auto" onchange="this.form.submit()">
+            <option value="">Sort Tasks</option>
+            <option value="dueDate" th:selected="${param.sort == 'dueDate'}">Sort by Due Date</option>
+        </select>
+    </form>
+
+    <!-- Add New Task Form -->
+    <form action="/" method="post" class="row row-cols-1 row-cols-md-auto g-3 align-items-center mb-4">
+        <!-- Task Title Input -->
+        <div class="col-md-5">
+            <input
+                    type="text"
+                    name="title"
+                    class="form-control form-control-lg"
+                    placeholder="Add a new task..."
+                    required
+            />
+        </div>
+
+        <!-- Priority Select -->
+        <div class="col-md-2">
+            <select name="priority" class="form-select form-select-lg" required>
+                <option value="">Priority</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+            </select>
+        </div>
+
+        <!-- Due Date Input -->
+        <div class="col-md-3">
+            <input
+                    type="date"
+                    name="dueDate"
+                    class="form-control form-control-lg"
+                    required
+                    id="dueDateInput"
+            />
+        </div>
+
+        <!-- Submit Button -->
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-lg btn-block">➕ ADD</button>
+        </div>
+    </form>
+
+    <!-- Task List -->
+    <div class="mt-4">
+        <!-- Iterate over each task in tasks list -->
+        <th:block th:each="task : ${tasks}">
+            <div class="task-card border rounded p-3 mb-3 shadow-sm bg-light">
+                <div class="d-flex justify-content-between align-items-start">
+                    <!-- Task Info -->
+                    <div>
+                        <!-- Task title with strikethrough if completed -->
+                        <h5
+                                th:classappend="${task.completed} ? 'text-decoration-line-through text-muted'"
+                                th:text="${task.title}"
+                        >
+                            Task Title
+                        </h5>
+
+                        <ul class="mb-1 ps-3">
+                            <li>
+                                <span class="fw-bold">Priority:</span>
+                                <span
+                                        th:text="${task.priority}"
+                                        th:classappend="'ms-1 badge ' +
+                                        (task.priority == 'LOW' ? 'bg-success' :
+                                        (task.priority == 'MEDIUM' ? 'bg-warning text-dark' : 'bg-danger'))"
+                                >
+                                </span>
+                            </li>
+                            <li>
+                                <span class="fw-bold">Due:</span>
+                                <!-- Friendly date like Today, Tomorrow, or formatted -->
+                                <span th:if="${task.friendlyDate != null}" th:text="${task.friendlyDate}"></span>
+                                <!-- Overdue badge if due date is before today and task incomplete -->
+                                <span
+                                        th:if="${task.dueDate != null and task.dueDate.isBefore(T(java.time.LocalDate).now()) and !task.completed}"
+                                        class="badge bg-danger ms-2"
+                                >
+                                  Overdue
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <a
+                                class="btn btn-outline-secondary btn-sm"
+                                th:href="@{/{id}/toggle(id=${task.id})}"
+                                th:text="${task.completed} ? 'Mark Incomplete' : 'Mark Complete'"
+                        ></a>
+
+                        <a
+                                class="btn btn-outline-primary btn-sm"
+                                th:href="@{/{id}/edit(id=${task.id})}"
+                        >
+                            Edit
+                        </a>
+
+                        <a
+                                class="btn btn-outline-danger btn-sm"
+                                th:href="@{/{id}/delete(id=${task.id})}"
+                        >
+                            Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+    </div>
+</div>
+
+<!-- Bootstrap JS Bundle for UI interactions -->
+<script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"
+></script>
+
+<!-- JS for delete button animation & due date input min date -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Animate delete with fade-out effect before redirecting
+        document.querySelectorAll('.btn-outline-danger').forEach(button => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault(); // Prevent immediate navigation
+                const card = this.closest('.task-card');
+                card.classList.add('removed'); // Custom fade-out class (define in CSS)
+                setTimeout(() => {
+                    window.location.href = this.href; // Redirect after animation
+                }, 300);
+            });
+        });
+
+        // Set minimum date on dueDate input to today to prevent past dates
+        const dueDateInput = document.getElementById('dueDateInput');
+        if (dueDateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dueDateInput.min = today;
+        }
+    });
+</script>
+</body>
+</html>
